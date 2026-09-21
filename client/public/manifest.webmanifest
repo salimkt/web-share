@@ -1,0 +1,19 @@
+{
+  "name": "WebShare — Local Network File Transfer",
+  "short_name": "WebShare",
+  "description": "Transfer files directly between devices on the same WiFi. No cloud, no accounts, no internet required.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080b14",
+  "theme_color": "#080b14",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+name: Deploy client to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two Pages deploys at once.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install client dependencies
+        run: npm ci --prefix client
+
+      - name: Build client
+        env:
+          # Pages serves this project from https://<user>.github.io/web-share/
+          VITE_BASE: /web-share/
+          # Optional: set a repository variable named VITE_SIGNALING_URL to a
+          # publicly reachable wss:// signaling server to make the hosted demo
+          # functional. Left unset, the build falls back to same-origin, which
+          # is correct for local and self-hosted LAN use.
+          VITE_SIGNALING_URL: ${{ vars.VITE_SIGNALING_URL }}
+        run: npm run build --prefix client
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
