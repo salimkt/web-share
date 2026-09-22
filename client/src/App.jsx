@@ -4,6 +4,7 @@ import { useWebRTC } from './hooks/useWebRTC';
 import { PeerGrid } from './components/PeerGrid';
 import { TransferDrawer } from './components/TransferDrawer';
 import { IncomingRequest } from './components/IncomingRequest';
+import { ConnectPanel } from './components/ConnectPanel';
 import { Avatar } from './components/shared';
 import './styles/index.css';
 
@@ -156,6 +157,9 @@ export default function App() {
             </span>
           )}
         </div>
+
+        {/* How another device joins this host (LAN mode only) */}
+        <ConnectPanel mode={mode} />
 
         {/* Peer section */}
         <section aria-labelledby="peers-heading">

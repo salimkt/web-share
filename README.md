@@ -51,6 +51,17 @@ http://192.168.1.42:3001
 
 Everything works with the router completely offline. The app also registers a service worker, so after the first load each device can reopen it without any connection at all.
 
+### Connecting the other device
+
+Once the host is running, the app shows a **Connect another device** panel with
+the host's address and a QR code. On the receiving device, join the same WiFi
+and either scan the code or type the address — that's the whole pairing step.
+The server prints the same address and QR in the terminal at startup.
+
+If the host has several addresses (home WiFi, a hotspot, a VPN), the panel
+features the most likely one and lists the rest under "Other addresses". Use
+whichever matches the network both devices are actually on.
+
 ### Who is the host?
 
 The host is whichever device **runs the server** — it needs Node.js. That is a

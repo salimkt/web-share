@@ -1086,3 +1086,114 @@ body::before {
   white-space: normal;
   line-height: 1.4;
 }
+
+/* ─── Connect Panel (host address + QR, LAN mode only) ────────────────────── */
+
+.connect-panel {
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 16px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.connect-panel-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  min-height: 44px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.connect-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connect-panel-chevron { color: var(--text-muted); font-size: 12px; }
+
+.connect-panel-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 0 16px 18px;
+  align-items: center;
+}
+
+.connect-panel-qr {
+  width: 140px;
+  height: 140px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.connect-panel-qr svg { width: 100%; height: 100%; display: block; }
+
+.connect-panel-info { flex: 1 1 240px; min-width: 0; }
+
+.connect-panel-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.connect-panel-url {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: var(--accent-glow, rgba(99, 102, 241, 0.12));
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.connect-panel-url code {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connect-panel-url:active { transform: scale(0.99); }
+
+.connect-panel-copy {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-light);
+  flex-shrink: 0;
+}
+
+.connect-panel-alt { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+.connect-panel-alt summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+.connect-panel-alt ul { margin: 6px 0; padding-left: 18px; }
+.connect-panel-alt p { margin: 6px 0 0; }
+
+@media (max-width: 480px) {
+  .connect-panel-body { justify-content: center; }
+  .connect-panel-qr { width: 160px; height: 160px; }
+}

@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 
 const app = express();
 const server = http.createServer(app);
@@ -191,6 +192,42 @@ function isNonEmptyString(value) {
 // Lightweight health check for uptime monitors / load balancers.
 app.get('/health', (req, res) => res.json({ ok: true, peers: peers.size }));
 
+const PORT = process.env.PORT || 3001;
+
+/**
+ * The address other devices should open to join this host.
+ *
+ * The app shows this (and the QR) in the UI, so you don't have to read the
+ * terminal or type an IP into a phone keyboard. Only meaningful when a real
+ * server is serving the app — the static build has no such endpoint, and the
+ * client treats a failed fetch as "not in LAN mode".
+ */
+app.get('/api/host-info', async (req, res) => {
+  try {
+    const ips = getLocalIPs();
+    const primaryIp = pickPrimaryIP(ips);
+    if (!primaryIp) {
+      return res.json({ primary: null, urls: [], qrSvg: null });
+    }
+
+    const primary = `http://${primaryIp}:${PORT}`;
+    const qrSvg = await QRCode.toString(primary, {
+      type: 'svg',
+      margin: 1,
+      color: { dark: '#000000', light: '#ffffff' },
+    });
+
+    res.json({
+      primary,
+      urls: ips.map((ip) => `http://${ip}:${PORT}`),
+      qrSvg,
+    });
+  } catch (err) {
+    console.error('[!] /api/host-info failed:', err.message);
+    res.status(500).json({ error: 'host info unavailable' });
+  }
+});
+
 // ─── Static Client (offline / LAN mode) ──────────────────────────────────────
 //
 // When the client has been built (`npm run build --prefix client`), serve it
@@ -349,7 +386,7 @@ io.on('connection', (socket) => {
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 
-const PORT = process.env.PORT || 3001;
+// PORT is declared near the top so the HTTP routes can build absolute URLs.
 server.listen(PORT, '0.0.0.0', () => {
   const localIPs = getLocalIPs();
   console.log('\n🚀 WebShare signaling server running');
