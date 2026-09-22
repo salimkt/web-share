@@ -17,6 +17,10 @@ const PC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
 // clobbers an already-successful 'done' with 'failed'.
 const TERMINAL_STATUSES = ['done', 'declined'];
 
+// How long to wait for the data channel to open before calling it a failure.
+// ICE on a busy network can be slow, so be patient before giving up.
+const CONNECT_TIMEOUT_MS = 25000;
+
 /**
  * Manages all WebRTC peer connections for file transfers.
  * One RTCPeerConnection per active transfer.
@@ -27,6 +31,8 @@ export function useWebRTC({ emit, on }) {
   const sendBufferRef = useRef({}); // transferId → { file, offset, channel }
   const receiveBufferRef = useRef({}); // transferId → { chunks, received, total, meta }
   const pendingCandidatesRef = useRef({}); // peerId → [ICE candidates buffered before remoteDescription]
+  const candidateTypesRef = useRef({}); // peerId → Set of gathered candidate types
+  const watchdogsRef = useRef({}); // transferId → timeout that fails a stuck connection
 
   // ─── Transfer State Helpers ──────────────────────────────────────────────
 
@@ -65,10 +71,37 @@ export function useWebRTC({ emit, on }) {
           targetId: peerId,
           candidate: candidate.toJSON ? candidate.toJSON() : candidate,
         });
+        candidateTypesRef.current[peerId] ??= new Set();
+        // "typ host" / "typ srflx" / "typ relay" — which kinds we managed to
+        // gather says a lot about why a LAN connection did or didn't form.
+        const kind = /typ (\w+)/.exec(candidate.candidate)?.[1];
+        if (kind) candidateTypesRef.current[peerId].add(kind);
+      }
+    };
+
+    // Without this a failed connection just hangs on "Connecting" forever.
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed') {
+        failTransfersForPeer(
+          peerId,
+          'No direct route between the devices (ICE failed)'
+        );
+        closePeerConnection(peerId);
       }
     };
 
     return pc;
+  }
+
+  /** Mark every still-running transfer with this peer as failed. */
+  function failTransfersForPeer(peerId, reason) {
+    setTransfers((prev) =>
+      prev.map((t) => {
+        if (t.peerId !== peerId) return t;
+        if (TERMINAL_STATUSES.includes(t.status) || t.status === 'failed') return t;
+        return { ...t, status: 'failed', error: reason };
+      })
+    );
   }
 
   function closePeerConnection(peerId) {
@@ -174,8 +207,22 @@ export function useWebRTC({ emit, on }) {
     const pc = createPeerConnection(peerId);
     const channel = pc.createDataChannel('file-transfer', { ordered: true });
 
+    // If the channel never opens, say why instead of sitting on "Waiting".
+    // ICE can take a while on a busy network, so this is deliberately patient.
+    watchdogsRef.current[transferId] = setTimeout(() => {
+      const types = [...(candidateTypesRef.current[peerId] ?? [])];
+      const detail = types.length
+        ? `only ${types.join('/')} candidates gathered`
+        : 'no ICE candidates gathered';
+      failTransfersForPeer(peerId, `Connection timed out — ${detail}`);
+      closePeerConnection(peerId);
+    }, CONNECT_TIMEOUT_MS);
+
     // Send file metadata first, then chunks
     channel.onopen = () => {
+      clearTimeout(watchdogsRef.current[transferId]);
+      delete watchdogsRef.current[transferId];
+
       const meta = JSON.stringify({
         filename: file.name,
         size: file.size,

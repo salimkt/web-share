@@ -73,6 +73,11 @@ function TransferItem({ transfer }) {
             {direction === 'send' ? '↑ Sending' : '↓ Receiving'} · {formatBytes(size)}
             {!isTerminal && progress > 0 && ` · ${progress}%`}
           </div>
+          {transfer.error && (
+            <div className="transfer-meta transfer-error" title={transfer.error}>
+              {transfer.error}
+            </div>
+          )}
         </div>
         <span className={`transfer-status-badge status-${badgeStatus}`}>
           {STATUS_LABELS[status] || status}

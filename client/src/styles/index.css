@@ -1078,3 +1078,11 @@ body::before {
   }
   .transfer-drawer { transition: none; }
 }
+
+/* Reason a transfer failed, shown under the size line. */
+.transfer-error {
+  color: var(--danger);
+  margin-top: 2px;
+  white-space: normal;
+  line-height: 1.4;
+}
