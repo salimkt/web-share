@@ -9,7 +9,7 @@
  * Strategy: cache-first for same-origin GETs. Bump CACHE to ship an update.
  */
 
-const CACHE = 'webshare-v1';
+const CACHE = 'webshare-v2';
 
 self.addEventListener('install', () => {
   // Take over immediately rather than waiting for existing tabs to close.
@@ -39,27 +39,44 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes('/socket.io')) return;
 
+  // The app shell: network-first, so a new deploy is picked up as soon as the
+  // device is online. Cache-first here would pin every returning visitor to
+  // whatever build they first loaded.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        try {
+          const response = await fetch(request);
+          if (response && response.ok) {
+            const cache = await caches.open(CACHE);
+            cache.put(request, response.clone());
+          }
+          return response;
+        } catch (err) {
+          const cached =
+            (await caches.match(request)) ||
+            (await caches.match(new URL('index.html', self.registration.scope).href));
+          if (cached) return cached;
+          throw err;
+        }
+      })()
+    );
+    return;
+  }
+
+  // Build assets carry a content hash in their name, so they're immutable —
+  // cache-first is both safe and the fastest path offline.
   event.respondWith(
     (async () => {
       const cached = await caches.match(request);
       if (cached) return cached;
 
-      try {
-        const response = await fetch(request);
-        if (response && response.ok && response.type === 'basic') {
-          const cache = await caches.open(CACHE);
-          cache.put(request, response.clone());
-        }
-        return response;
-      } catch (err) {
-        // Offline and not cached: serve the app shell for page navigations so
-        // a reload (or a deep link) still opens the app.
-        if (request.mode === 'navigate') {
-          const shell = await caches.match(new URL('index.html', self.registration.scope).href);
-          if (shell) return shell;
-        }
-        throw err;
+      const response = await fetch(request);
+      if (response && response.ok && response.type === 'basic') {
+        const cache = await caches.open(CACHE);
+        cache.put(request, response.clone());
       }
+      return response;
     })()
   );
 });
