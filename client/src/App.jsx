@@ -8,7 +8,7 @@ import { Avatar } from './components/shared';
 import './styles/index.css';
 
 export default function App() {
-  const { connected, selfInfo, peers, on, emit, socketRef } = useSocket();
+  const { connected, selfInfo, peers, on, emit, socketRef, mode } = useSocket();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [incomingRequests, setIncomingRequests] = useState([]);
 
@@ -142,11 +142,19 @@ export default function App() {
       <main className="main-content">
         {/* Info banner */}
         <div className="info-banner" role="note">
-          <span className="info-banner-icon">💡</span>
-          <span>
-            Open <strong>WebShare</strong> on any device on this WiFi network — they'll appear below.
-            Click a peer to send them a file directly, no cloud involved.
-          </span>
+          <span className="info-banner-icon">{mode === 'local' ? '🪟' : '💡'}</span>
+          {mode === 'local' ? (
+            <span>
+              <strong>Tab mode</strong> — no signaling server here, so WebShare is pairing
+              tabs in this browser. Open this page in a second tab and it'll appear below.
+              To share between real devices, run WebShare on your own WiFi.
+            </span>
+          ) : (
+            <span>
+              Open <strong>WebShare</strong> on any device on this WiFi network — they'll appear below.
+              Click a peer to send them a file directly, no cloud involved.
+            </span>
+          )}
         </div>
 
         {/* Peer section */}
@@ -166,6 +174,7 @@ export default function App() {
           <PeerGrid
             peers={peers}
             connected={connected}
+            mode={mode}
             onSendFile={handleSendFile}
           />
         </section>

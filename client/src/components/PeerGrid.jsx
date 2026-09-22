@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PeerCard } from './PeerCard';
 
-export function PeerGrid({ peers, connected, onSendFile }) {
+export function PeerGrid({ peers, connected, mode, onSendFile }) {
   // If the signaling server can't be reached, explain why instead of spinning
   // forever — that's what a visitor sees on a statically hosted build with no
   // signaling server available.
@@ -46,10 +46,17 @@ export function PeerGrid({ peers, connected, onSendFile }) {
       <div className="empty-state" aria-live="polite">
         <div className="empty-state-icon" aria-hidden="true">📡</div>
         <h3>Waiting for others…</h3>
-        <p>
-          Open WebShare on another device connected to the same WiFi network.
-          They'll appear here automatically.
-        </p>
+        {mode === 'local' ? (
+          <p>
+            Open this page in another browser tab and it'll appear here, ready to
+            receive a file.
+          </p>
+        ) : (
+          <p>
+            Open WebShare on another device connected to the same WiFi network.
+            They'll appear here automatically.
+          </p>
+        )}
       </div>
     );
   }

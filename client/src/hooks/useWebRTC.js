@@ -59,7 +59,12 @@ export function useWebRTC({ emit, on }) {
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
-        emit('webrtc-ice', { targetId: peerId, candidate });
+        // Send plain data, not the RTCIceCandidate object: structured clone
+        // (used by the BroadcastChannel transport) rejects platform objects.
+        emit('webrtc-ice', {
+          targetId: peerId,
+          candidate: candidate.toJSON ? candidate.toJSON() : candidate,
+        });
       }
     };
 
