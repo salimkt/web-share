@@ -81,13 +81,30 @@ ipconfig
 
 ## A Note on GitHub Pages
 
-The client is deployed to GitHub Pages as a **showcase of the UI** — it is not a working transfer app, and it can't be:
+The client is deployed to Pages at
+[salimkt.github.io/web-share](https://salimkt.github.io/web-share/). There is no
+server there, so it runs in **tab mode**: tabs of the same browser find each
+other over `BroadcastChannel` and transfer files to each other with no backend.
+The banner says so when this is active.
 
-- Pages is HTTPS-only, and a secure page is forbidden from opening a `ws://192.168.x.x` connection (mixed content).
-- A private LAN IP can't hold a valid TLS certificate, so the local server can't be HTTPS either.
-- WebRTC always needs a signaling channel to discover peers, and with no internet that channel has to live on the LAN.
+**Tab mode cannot pair two devices.** `BroadcastChannel` never leaves a single
+browser, so a phone and a laptop both on the Pages URL will never see each
+other — that is the transport's limit, not a bug. Two devices can't be paired
+from Pages at all:
 
-So for real transfers, use **Offline / LAN Mode** above. To make a hosted build functional instead, deploy `server/` somewhere with HTTPS and set a repository variable `VITE_SIGNALING_URL` to its `wss://` URL — the Pages workflow picks it up automatically.
+- Pages is HTTPS-only, and a secure page is forbidden from opening a
+  `ws://192.168.x.x` connection (mixed content).
+- A private LAN IP can't hold a valid TLS certificate, so the local server
+  can't be HTTPS either.
+- WebRTC always needs a signaling channel to discover peers, and with no
+  internet that channel has to live on the LAN.
+
+**For phone ↔ laptop, use Offline / LAN Mode above.** Alternatively, to make the
+hosted build work across devices, deploy `server/` somewhere with HTTPS and set
+a repository variable `VITE_SIGNALING_URL` to its `wss://` URL — the Pages
+workflow picks it up automatically. That needs internet, but the file bytes
+still travel peer-to-peer over the local WiFi; only the handshake goes through
+the server.
 
 ## Project Structure
 

@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const qrcode = require('qrcode-terminal');
 
 const app = express();
 const server = http.createServer(app);
@@ -128,6 +129,24 @@ function getLocalIPs() {
     }
   }
   return ips;
+}
+
+/**
+ * Best guess at the address other devices should open.
+ *
+ * A laptop usually has several interfaces at once (home WiFi, an internet
+ * sharing bridge, a VPN), and only one of them is the network the phone is
+ * actually on. Phone hotspots use well-known ranges, so prefer those.
+ */
+function pickPrimaryIP(ips) {
+  const rank = (ip) => {
+    if (ip.startsWith('172.20.10.')) return 0; // iPhone Personal Hotspot
+    if (ip.startsWith('192.168.43.')) return 1; // common Android hotspot
+    if (ip.startsWith('192.168.')) return 2;
+    if (ip.startsWith('10.')) return 3;
+    return 4;
+  };
+  return [...ips].sort((a, b) => rank(a) - rank(b))[0] || null;
 }
 
 // ─── Peer Store ──────────────────────────────────────────────────────────────
@@ -345,8 +364,18 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(
       `\n   Peer grouping: ${
         GROUP_BY_SUBNET ? 'per /24 subnet (public hosting mode)' : 'single LAN room (default)'
-      }\n`
+      }`
     );
+
+    // Typing an address like 172.20.10.2:3001 on a phone is the most annoying
+    // part of getting started, so print a QR code for the best-guess address.
+    const primary = pickPrimaryIP(localIPs);
+    if (primary) {
+      const url = `http://${primary}:${PORT}`;
+      console.log(`\n   📱 Scan on your phone to open ${url}\n`);
+      qrcode.generate(url, { small: true });
+      console.log('');
+    }
   } else {
     console.log('\n   Dev client: http://<your-ip>:5173');
     console.log('   Tip: `npm run build --prefix client` to serve the app from this port.\n');
