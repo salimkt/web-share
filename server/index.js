@@ -77,6 +77,30 @@ function getSubnet(ip) {
 }
 
 /**
+ * Decide which room a client belongs to.
+ *
+ * Default: a single shared room. Any device that can reach this server is by
+ * definition already on the same local network — reaching a private LAN
+ * address is only possible from inside that network — so there is nothing to
+ * separate.
+ *
+ * Subnet grouping used to be the default and broke the most common setup:
+ * the device running the server opens http://localhost:3001 and is placed in
+ * a "localhost" room, while a phone joining over WiFi lands in e.g.
+ * "172.20.10", so the two never see each other. It also can't describe a
+ * phone hotspot, which hands out a /28 (172.20.10.0/28), not a /24.
+ *
+ * Set GROUP_BY_SUBNET=1 only when hosting this signaling server publicly,
+ * where grouping clients by their public /24 keeps unrelated WiFi networks
+ * apart.
+ */
+const GROUP_BY_SUBNET = process.env.GROUP_BY_SUBNET === '1';
+
+function getRoom(ip) {
+  return GROUP_BY_SUBNET ? getSubnet(ip) : 'lan';
+}
+
+/**
  * Extract the client IP robustly across proxy setups and OSes.
  * `x-forwarded-for` may be a comma-separated string OR an array of values;
  * take the first entry either way, falling back to the socket address.
@@ -187,22 +211,22 @@ if (hasClientBuild) {
 io.on('connection', (socket) => {
   try {
     const ip = getClientIP(socket);
-    const subnet = getSubnet(ip);
+    const room = getRoom(ip);
     const userAgent = socket.handshake.headers['user-agent'] || '';
 
     const peer = {
       id: socket.id,
-      name: generateUniquePeerName(subnet),
+      name: generateUniquePeerName(room),
       color: generateAvatarColor(),
-      room: subnet,
+      room,
       deviceType: detectDeviceType(userAgent),
       ip,
     };
 
     peers.set(socket.id, peer);
-    socket.join(subnet);
+    socket.join(room);
 
-    console.log(`[+] ${peer.name} joined (${ip} → room: ${subnet})`);
+    console.log(`[+] ${peer.name} joined (${ip} → room: ${room})`);
 
     // Send the new peer its own info
     socket.emit('self-info', {
@@ -213,7 +237,7 @@ io.on('connection', (socket) => {
     });
 
     // Broadcast updated peer list to everyone in the room
-    broadcastPeerList(subnet);
+    broadcastPeerList(room);
   } catch (err) {
     console.error(`[!] Connection setup failed for ${socket.id}:`, err.message);
   }
@@ -315,9 +339,14 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`   Network: http://${ip}:${PORT}`);
   });
   if (hasClientBuild) {
-    console.log('\n   ✅ Serving the built client from this origin.');
-    console.log('   Open a Network URL above on any device on this WiFi.');
-    console.log('   No internet required — files transfer directly over WiFi.\n');
+    console.log('\n   ✅ This device is the HOST — it serves the app to everyone else.');
+    console.log('   Open a Network URL above on every device, including this one.');
+    console.log('   No internet required — files transfer directly over WiFi.');
+    console.log(
+      `\n   Peer grouping: ${
+        GROUP_BY_SUBNET ? 'per /24 subnet (public hosting mode)' : 'single LAN room (default)'
+      }\n`
+    );
   } else {
     console.log('\n   Dev client: http://<your-ip>:5173');
     console.log('   Tip: `npm run build --prefix client` to serve the app from this port.\n');

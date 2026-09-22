@@ -11,6 +11,12 @@ const ICE_SERVERS = [
 // Modern browsers expose RTCPeerConnection unprefixed.
 const PC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
 
+// Statuses that mean the transfer is over for good. Once a transfer reaches
+// one, a later status change must not move it back out: whichever peer closes
+// the data channel first fires an error on the other side, which otherwise
+// clobbers an already-successful 'done' with 'failed'.
+const TERMINAL_STATUSES = ['done', 'declined'];
+
 /**
  * Manages all WebRTC peer connections for file transfers.
  * One RTCPeerConnection per active transfer.
@@ -30,7 +36,18 @@ export function useWebRTC({ emit, on }) {
 
   const updateTransfer = useCallback((id, updates) => {
     setTransfers((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        // Ignore a status change that would undo a finished transfer.
+        if (
+          updates.status &&
+          updates.status !== t.status &&
+          TERMINAL_STATUSES.includes(t.status)
+        ) {
+          return t;
+        }
+        return { ...t, ...updates };
+      })
     );
   }, []);
 
@@ -312,7 +329,13 @@ export function useWebRTC({ emit, on }) {
       triggerDownload(blob, meta.filename);
       updateTransfer(transferId, { status: 'done', progress: 100 });
       delete receiveBufferRef.current[transferId];
-      closePeerConnection(fromId);
+      // Let the sender observe the transfer finishing before tearing the
+      // connection down — closing instantly raises an error on its side.
+      // Guarded so a newer transfer to the same peer isn't closed.
+      const pcToClose = pcsRef.current[fromId];
+      setTimeout(() => {
+        if (pcsRef.current[fromId] === pcToClose) closePeerConnection(fromId);
+      }, 1000);
     }
   }
 

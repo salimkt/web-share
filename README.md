@@ -51,6 +51,24 @@ http://192.168.1.42:3001
 
 Everything works with the router completely offline. The app also registers a service worker, so after the first load each device can reopen it without any connection at all.
 
+### Who is the host?
+
+The host is whichever device **runs the server** — it needs Node.js. That is a
+separate role from whichever device provides the WiFi.
+
+A common setup is a phone sharing its hotspot while a laptop hosts the app:
+
+| Role | Device | What it does |
+|------|--------|--------------|
+| Hotspot | Phone | Provides the WiFi network |
+| Host | Laptop | Runs `npm start --prefix server` |
+| Clients | Phone, laptop, anyone else | Open `http://<laptop-ip>:3001` |
+
+A phone can't be the host, because a mobile browser can't run Node. Open the
+host's address on **every** device — including the host itself. Using
+`http://localhost:3001` on the host works too; all clients of one server share
+a single peer room regardless of which address they arrived on.
+
 Find your local IP manually if needed:
 
 ```bash
